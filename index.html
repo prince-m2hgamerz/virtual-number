@@ -130,7 +130,7 @@
     <!-- Section 1: Countries -->
     <div class="section">
       <label>🌍 Available Countries</label>
-      <button onclick="loadCountries()">Load Countries</button>
+      <button onclick="callApi('countriesOutput', `https://${apiHost}/1466/get%2Bcountries`)">Load Countries</button>
       <div class="card" id="countriesOutput">
         <div class="spinner"></div>
         <div class="content">Results will appear here...</div>
@@ -139,9 +139,9 @@
 
     <!-- Section 2: Get Numbers -->
     <div class="section">
-      <label for="countrySelect">📞 Select Country</label>
-      <select id="countrySelect"></select>
-      <button onclick="getNumbers()">Get Numbers</button>
+      <label for="countrySelect">📞 Enter Country Code</label>
+      <input type="text" id="countrySelect" placeholder="Example: 1 for US, 91 for India">
+      <button onclick="callApi('numbersOutput', `https://${apiHost}/1467/get%2Bnumber%2Bby%2Bcountry%2Bid?countryCode=${document.getElementById('countrySelect').value}`)">Get Numbers</button>
       <div class="card" id="numbersOutput">
         <div class="spinner"></div>
         <div class="content">Results will appear here...</div>
@@ -150,9 +150,11 @@
 
     <!-- Section 3: Get Messages -->
     <div class="section">
-      <label for="phone">📩 Enter Phone Number</label>
+      <label for="countryCode">🌍 Country Code</label>
+      <input type="text" id="countryCode" placeholder="Example: 44 for UK">
+      <label for="phone">📩 Phone Number</label>
       <input type="text" id="phone" placeholder="Enter phone number">
-      <button onclick="getMessages()">View Messages</button>
+      <button onclick="callApi('messagesOutput', `https://${apiHost}/1469/check%2Bsms%2Bhistory?countryCode=${document.getElementById('countryCode').value}&phoneNumber=${document.getElementById('phone').value}`)">View Messages</button>
       <div class="card" id="messagesOutput">
         <div class="spinner"></div>
         <div class="content">Results will appear here...</div>
@@ -178,78 +180,29 @@
       }
     }
 
-    // Section 1: Get Countries
-    async function loadCountries() {
-      setLoading("countriesOutput", true);
+    // Generic API Caller - always show raw response
+    async function callApi(cardId, url) {
+      setLoading(cardId, true);
       try {
-        const res = await fetch(`https://${apiHost}/1466/get%2Bcountries`, {
+        const res = await fetch(url, {
           method: "GET",
           headers: {
             "x-rapidapi-key": apiKey,
             "x-rapidapi-host": apiHost
           }
         });
-        const data = await res.json();
-        setLoading("countriesOutput", false, JSON.stringify(data, null, 2));
 
-        // Populate dropdown
-        const countrySelect = document.getElementById("countrySelect");
-        countrySelect.innerHTML = "";
-        data.forEach(c => {
-          let option = document.createElement("option");
-          option.value = c.countryCode;
-          option.textContent = `${c.countryName} (+${c.countryCode})`;
-          countrySelect.appendChild(option);
-        });
-      } catch (err) {
-        setLoading("countriesOutput", false, "❌ Error loading countries: " + err);
-      }
-    }
+        // Try JSON first, fallback to text
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          data = await res.text();
+        }
 
-    // Section 2: Get Numbers
-    async function getNumbers() {
-      const code = document.getElementById("countrySelect").value;
-      if (!code) {
-        setLoading("numbersOutput", false, "⚠️ Please load and select a country first.");
-        return;
-      }
-      setLoading("numbersOutput", true);
-      try {
-        const res = await fetch(`https://${apiHost}/1467/get%2Bnumber%2Bby%2Bcountry%2Bid?countryCode=${code}`, {
-          method: "GET",
-          headers: {
-            "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": apiHost
-          }
-        });
-        const data = await res.json();
-        setLoading("numbersOutput", false, JSON.stringify(data, null, 2));
+        setLoading(cardId, false, typeof data === "string" ? data : JSON.stringify(data, null, 2));
       } catch (err) {
-        setLoading("numbersOutput", false, "❌ Error fetching numbers: " + err);
-      }
-    }
-
-    // Section 3: Get Messages
-    async function getMessages() {
-      const code = document.getElementById("countrySelect").value;
-      const phone = document.getElementById("phone").value;
-      if (!phone) {
-        setLoading("messagesOutput", false, "⚠️ Enter a phone number first.");
-        return;
-      }
-      setLoading("messagesOutput", true);
-      try {
-        const res = await fetch(`https://${apiHost}/1469/check%2Bsms%2Bhistory?countryCode=${code}&phoneNumber=${phone}`, {
-          method: "GET",
-          headers: {
-            "x-rapidapi-key": apiKey,
-            "x-rapidapi-host": apiHost
-          }
-        });
-        const data = await res.json();
-        setLoading("messagesOutput", false, JSON.stringify(data, null, 2));
-      } catch (err) {
-        setLoading("messagesOutput", false, "❌ Error fetching messages: " + err);
+        setLoading(cardId, false, "❌ Error: " + err);
       }
     }
   </script>
