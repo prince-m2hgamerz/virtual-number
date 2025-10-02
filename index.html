@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Number API Explorer</title>
+  <style>
+    /* Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #141e30, #243b55);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      backdrop-filter: blur(15px);
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 2rem;
+      color: #ff9d76;
+    }
+
+    .section {
+      margin-bottom: 25px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    select, input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+    }
+
+    select, input {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+
+    button {
+      background: linear-gradient(135deg, #ff512f, #dd2476);
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    }
+
+    .card {
+      margin-top: 15px;
+      background: rgba(0,0,0,0.4);
+      padding: 15px;
+      border-radius: 12px;
+      max-height: 250px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      position: relative;
+    }
+
+    /* Spinner */
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.2);
+      border-top: 4px solid #ff9d76;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading .spinner {
+      display: block;
+    }
+    .loading .content {
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.6rem;
+      }
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📱 Virtual Number API Explorer</h1>
+
+    <!-- Section 1: Countries -->
+    <div class="section">
+      <label>🌍 Available Countries</label>
+      <button onclick="loadCountries()">Load Countries</button>
+      <div class="card" id="countriesOutput">
+        <div class="spinner"></div>
+        <div class="content">Results will appear here...</div>
+      </div>
+    </div>
+
+    <!-- Section 2: Get Numbers -->
+    <div class="section">
+      <label for="countrySelect">📞 Select Country</label>
+      <select id="countrySelect"></select>
+      <button onclick="getNumbers()">Get Numbers</button>
+      <div class="card" id="numbersOutput">
+        <div class="spinner"></div>
+        <div class="content">Results will appear here...</div>
+      </div>
+    </div>
+
+    <!-- Section 3: Get Messages -->
+    <div class="section">
+      <label for="phone">📩 Enter Phone Number</label>
+      <input type="text" id="phone" placeholder="Enter phone number">
+      <button onclick="getMessages()">View Messages</button>
+      <div class="card" id="messagesOutput">
+        <div class="spinner"></div>
+        <div class="content">Results will appear here...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiKey = "38366f243bmsh1d643a75ae7c31fp12c0f1jsn8531bc7308c8";
+    const apiHost = "global-virtual-number-api.p.rapidapi.com";
+
+    // Helper: show/hide loading
+    function setLoading(cardId, isLoading, text = "") {
+      const card = document.getElementById(cardId);
+      const spinner = card.querySelector(".spinner");
+      const content = card.querySelector(".content");
+      if (isLoading) {
+        card.classList.add("loading");
+        content.textContent = "";
+      } else {
+        card.classList.remove("loading");
+        content.textContent = text;
+      }
+    }
+
+    // Section 1: Get Countries
+    async function loadCountries() {
+      setLoading("countriesOutput", true);
+      try {
+        const res = await fetch(`https://${apiHost}/1466/get%2Bcountries`, {
+          method: "GET",
+          headers: {
+            "x-rapidapi-key": apiKey,
+            "x-rapidapi-host": apiHost
+          }
+        });
+        const data = await res.json();
+        setLoading("countriesOutput", false, JSON.stringify(data, null, 2));
+
+        // Populate dropdown
+        const countrySelect = document.getElementById("countrySelect");
+        countrySelect.innerHTML = "";
+        data.forEach(c => {
+          let option = document.createElement("option");
+          option.value = c.countryCode;
+          option.textContent = `${c.countryName} (+${c.countryCode})`;
+          countrySelect.appendChild(option);
+        });
+      } catch (err) {
+        setLoading("countriesOutput", false, "❌ Error loading countries: " + err);
+      }
+    }
+
+    // Section 2: Get Numbers
+    async function getNumbers() {
+      const code = document.getElementById("countrySelect").value;
+      if (!code) {
+        setLoading("numbersOutput", false, "⚠️ Please load and select a country first.");
+        return;
+      }
+      setLoading("numbersOutput", true);
+      try {
+        const res = await fetch(`https://${apiHost}/1467/get%2Bnumber%2Bby%2Bcountry%2Bid?countryCode=${code}`, {
+          method: "GET",
+          headers: {
+            "x-rapidapi-key": apiKey,
+            "x-rapidapi-host": apiHost
+          }
+        });
+        const data = await res.json();
+        setLoading("numbersOutput", false, JSON.stringify(data, null, 2));
+      } catch (err) {
+        setLoading("numbersOutput", false, "❌ Error fetching numbers: " + err);
+      }
+    }
+
+    // Section 3: Get Messages
+    async function getMessages() {
+      const code = document.getElementById("countrySelect").value;
+      const phone = document.getElementById("phone").value;
+      if (!phone) {
+        setLoading("messagesOutput", false, "⚠️ Enter a phone number first.");
+        return;
+      }
+      setLoading("messagesOutput", true);
+      try {
+        const res = await fetch(`https://${apiHost}/1469/check%2Bsms%2Bhistory?countryCode=${code}&phoneNumber=${phone}`, {
+          method: "GET",
+          headers: {
+            "x-rapidapi-key": apiKey,
+            "x-rapidapi-host": apiHost
+          }
+        });
+        const data = await res.json();
+        setLoading("messagesOutput", false, JSON.stringify(data, null, 2));
+      } catch (err) {
+        setLoading("messagesOutput", false, "❌ Error fetching messages: " + err);
+      }
+    }
+  </script>
+</body>
+</html>
